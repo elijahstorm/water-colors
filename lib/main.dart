@@ -12,6 +12,7 @@ class WaterColors extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
+        backgroundColor: Colors.black87,
         body: InteractiveViewer(
           child: const StringPhysics(),
         ),

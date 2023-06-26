@@ -38,16 +38,15 @@ class StringPhysicsState extends State<StringPhysics>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final size = context.size!;
+      final int columnCount = size.width ~/ stringWidth;
       const int rowCount = 10;
-      final int columnCount = size.width ~/ (stringWidth * 6);
 
       for (int j = 0; j < columnCount; j++) {
-        final stringBodies =
-            <forge.Body>[]; // Create a new list for each string
+        final stringBodies = <forge.Body>[];
 
         for (int i = 0; i < rowCount; i++) {
-          final x = j * stringWidth * 6;
-          final y = i * (stringHeight * 3) + 100;
+          final x = j * stringWidth;
+          final y = i * stringHeight + 100;
 
           final shape = forge.PolygonShape();
           shape.setAsBoxXY(stringWidth / 2, stringHeight);
@@ -57,7 +56,8 @@ class StringPhysicsState extends State<StringPhysics>
             ..position = vector.Vector2(x, y);
 
           final body = world.createBody(bodyDef);
-          body.createFixtureFromShape(shape);
+          final fixtureDef = forge.FixtureDef(shape)..isSensor = true;
+          body.createFixture(fixtureDef);
 
           // If this is not the first segment in the string, connect it to the previous segment with a DistanceJoint
           if (i > 0) {

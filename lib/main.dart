@@ -8,18 +8,15 @@ void main() {
   runApp(const WaterColors());
 }
 
-class WaterColors extends StatefulWidget {
+class WaterColors extends StatelessWidget {
+  const WaterColors({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
         body: InteractiveViewer(
-          child: GestureDetector(
-            onPanUpdate: (details) {
-              // update the wind force based on the swipe direction and velocity
-            },
-            child: const StringPhysics(),
-          ),
+          child: const StringPhysics(),
         ),
       ),
     );

@@ -27,7 +27,7 @@ class StringPhysicsState extends WindPhysicsState {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final size = context.size!;
+      size = context.size!;
       final int columnCount = size.width ~/ (stringWidth * 5);
       final int rowCount = size.height ~/ (stringHeight);
 

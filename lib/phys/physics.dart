@@ -13,18 +13,48 @@ class StringPhysics extends StatefulWidget {
 
 class StringPhysicsState extends State<StringPhysics>
     with TickerProviderStateMixin {
-  final forge.World world = forge.World(vector.Vector2(0, -10));
+  final forge.World world = forge.World(vector.Vector2(0, 0)); // no gravity
   final List<forge.Body> strings = [];
   late final Ticker ticker;
 
   @override
   void initState() {
     super.initState();
+
+    const double stringWidth = 10.0;
+    const double stringHeight = 50.0;
+
     ticker = createTicker((delta) {
       world.stepDt(delta.inSeconds.toDouble());
       setState(() {});
     });
+
     ticker.start();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final size = context.size!;
+      final int rowCount = size.height ~/ stringHeight;
+      final int columnCount = size.width ~/ stringWidth;
+
+      for (int i = 0; i < rowCount; i++) {
+        for (int j = 0; j < columnCount; j++) {
+          final x = j * stringWidth * 2;
+          final y = i * stringHeight * 2;
+
+          final shape = forge.PolygonShape();
+          shape.setAsBoxXY(stringWidth / 2, stringHeight / 2);
+
+          final bodyDef = forge.BodyDef()
+            ..type = forge.BodyType.dynamic
+            ..position = vector.Vector2(x, y);
+
+          final body = world.createBody(bodyDef);
+          body.createFixtureFromShape(shape);
+
+          strings.add(body);
+        }
+      }
+    });
   }
 
   @override
@@ -37,7 +67,10 @@ class StringPhysicsState extends State<StringPhysics>
   Widget build(BuildContext context) {
     return GestureDetector(
       onPanUpdate: (details) {
-        // update the wind force based on the swipe direction and velocity
+        final force = vector.Vector2(details.delta.dx, details.delta.dy);
+        for (final string in strings) {
+          string.applyForce(force);
+        }
       },
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {

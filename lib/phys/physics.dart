@@ -15,7 +15,7 @@ class StringPhysicsState extends State<StringPhysics>
     with TickerProviderStateMixin {
   final forge.World world = forge.World(vector.Vector2(0, 0)); // no gravity
   final double radius = 20.0;
-  final List<forge.Body> strings = [];
+  final List<List<forge.Body>> strings = [];
   late final Ticker ticker;
 
   late final AnimationController colorController;
@@ -36,7 +36,7 @@ class StringPhysicsState extends State<StringPhysics>
 
     ticker.start();
 
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       final size = context.size!;
       final int rowCount = size.height ~/ stringHeight;
       final int columnCount = size.width ~/ stringWidth;
@@ -75,8 +75,7 @@ class StringPhysicsState extends State<StringPhysics>
           stringBodies.add(body);
         }
 
-        strings.addAll(
-            stringBodies); // Add the bodies of this string to the main list
+        strings.addAll([stringBodies]);
       }
     });
 
@@ -110,12 +109,14 @@ class StringPhysicsState extends State<StringPhysics>
         final inputPoint =
             vector.Vector2(details.localPosition.dx, details.localPosition.dy);
 
-        for (final string in strings) {
-          final stringPosition = string.position;
-          final distance = (stringPosition - inputPoint).length;
+        for (final stringGroup in strings) {
+          for (final string in stringGroup) {
+            final stringPosition = string.position;
+            final distance = (stringPosition - inputPoint).length;
 
-          if (distance < radius) {
-            string.applyForce(force);
+            if (distance < radius) {
+              string.applyForce(force);
+            }
           }
         }
       },

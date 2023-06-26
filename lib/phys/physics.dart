@@ -13,10 +13,13 @@ class StringPhysics extends StatefulWidget {
 
 class StringPhysicsState extends State<StringPhysics>
     with TickerProviderStateMixin {
-  final forge.World world = forge.World(vector.Vector2(0, 0)); // no gravity
-  final double radius = 20.0;
-  final List<List<forge.Body>> strings = [];
   late final Ticker ticker;
+  final forge.World world = forge.World(vector.Vector2(0, 0)); // no gravity
+  final List<List<forge.Body>> strings = [];
+  final double radius = 20.0;
+  final double stringWidth = 8.0;
+  final double stringHeight = 30.0;
+  final double borderBounds = 10.0;
 
   late final AnimationController colorController;
   late final Animation<Color?> colorStartSources;
@@ -25,9 +28,6 @@ class StringPhysicsState extends State<StringPhysics>
   @override
   void initState() {
     super.initState();
-
-    const double stringWidth = 10.0;
-    const double stringHeight = 50.0;
 
     ticker = createTicker((delta) {
       world.stepDt(delta.inSeconds.toDouble());
@@ -38,19 +38,19 @@ class StringPhysicsState extends State<StringPhysics>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final size = context.size!;
-      final int rowCount = size.height ~/ stringHeight;
-      final int columnCount = size.width ~/ stringWidth;
+      const int rowCount = 10;
+      final int columnCount = size.width ~/ (stringWidth * 6);
 
       for (int j = 0; j < columnCount; j++) {
         final stringBodies =
             <forge.Body>[]; // Create a new list for each string
 
         for (int i = 0; i < rowCount; i++) {
-          final x = j * stringWidth * 2;
-          final y = i * stringHeight * 2;
+          final x = j * stringWidth * 6;
+          final y = i * (stringHeight * 3) + 100;
 
           final shape = forge.PolygonShape();
-          shape.setAsBoxXY(stringWidth / 2, stringHeight / 2);
+          shape.setAsBoxXY(stringWidth / 2, stringHeight);
 
           final bodyDef = forge.BodyDef()
             ..type = forge.BodyType.dynamic
@@ -66,8 +66,7 @@ class StringPhysicsState extends State<StringPhysics>
             final jointDef = forge.DistanceJointDef()
               ..initialize(prevBody, body, prevBody.position, body.position);
 
-            final joint = forge.DistanceJoint(
-                jointDef); // Create a DistanceJoint from the DistanceJointDef
+            final joint = forge.DistanceJoint(jointDef);
 
             world.createJoint(joint);
           }
@@ -103,36 +102,59 @@ class StringPhysicsState extends State<StringPhysics>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanUpdate: (details) {
-        final force = vector.Vector2(details.delta.dx, details.delta.dy);
-        final inputPoint =
-            vector.Vector2(details.localPosition.dx, details.localPosition.dy);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final size = Size(constraints.maxWidth, constraints.maxHeight);
+        final center = vector.Vector2(size.width / 2, size.height / 2);
 
-        for (final stringGroup in strings) {
-          for (final string in stringGroup) {
-            final stringPosition = string.position;
-            final distance = (stringPosition - inputPoint).length;
+        for (final string in strings) {
+          for (final body in string) {
+            final position = body.position;
 
-            if (distance < radius) {
-              string.applyForce(force);
+            if (position.x < borderBounds ||
+                position.y < borderBounds ||
+                position.x > size.width - borderBounds ||
+                position.y > size.height - borderBounds) {
+              final force = (center - position).normalized() * 0.003;
+              body.applyForce(force);
             }
           }
         }
+
+        return GestureDetector(
+          onPanUpdate: (details) {
+            final force = vector.Vector2(details.delta.dx, details.delta.dy);
+            final inputPoint = vector.Vector2(
+                details.localPosition.dx, details.localPosition.dy);
+
+            for (final stringGroup in strings) {
+              for (final string in stringGroup) {
+                final stringPosition = string.position;
+                final distance = (stringPosition - inputPoint).length;
+
+                if (distance < radius) {
+                  string.applyForce(force);
+                }
+              }
+            }
+          },
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              return CustomPaint(
+                size: Size(constraints.maxWidth, constraints.maxHeight),
+                painter: StringPainter(
+                  world,
+                  strings,
+                  colorsStart: colorStartSources,
+                  colorsEnd: colorEndSources,
+                  stringHeight: stringHeight,
+                  stringWidth: stringWidth,
+                ),
+              );
+            },
+          ),
+        );
       },
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          return CustomPaint(
-            size: Size(constraints.maxWidth, constraints.maxHeight),
-            painter: StringPainter(
-              world,
-              strings,
-              colorsStart: colorStartSources,
-              colorsEnd: colorEndSources,
-            ),
-          );
-        },
-      ),
     );
   }
 }

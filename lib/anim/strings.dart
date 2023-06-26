@@ -8,16 +8,17 @@ class StringPainter extends CustomPainter {
   final List<List<forge.Body>> strings;
   final Animation<Color?> colorsStart;
   final Animation<Color?> colorsEnd;
+  final double stringWidth;
+  final double stringHeight;
 
   StringPainter(
     this.world,
     this.strings, {
     required this.colorsStart,
     required this.colorsEnd,
+    required this.stringWidth,
+    required this.stringHeight,
   });
-
-  final double stringWidth = 8.0;
-  final double stringHeight = 80.0;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -36,16 +37,8 @@ class StringPainter extends CustomPainter {
 
         canvas.save();
 
-        // Translate the canvas to the position of the string and rotate it to match the angle of the string
         canvas.translate(position.x, position.y);
         canvas.rotate(angle);
-
-        final rect = Rect.fromLTWH(
-          -stringWidth / 2,
-          -stringHeight / 2,
-          stringWidth,
-          stringHeight,
-        );
 
         // Calculate the blend factor based on the vertical position of the string
         final t = position.y / size.height;
@@ -58,9 +51,16 @@ class StringPainter extends CustomPainter {
           ..style = PaintingStyle.fill;
 
         // Create a path for a rectangle with rounded ends
+        final curve = Radius.circular(stringWidth / 2);
         final path = Path()
-          ..addRRect(
-              RRect.fromRectAndRadius(rect, Radius.circular(stringWidth / 2)));
+          ..addRRect(RRect.fromRectAndCorners(
+            Rect.fromLTWH(
+                -stringWidth / 2, -stringHeight / 2, stringWidth, stringHeight),
+            topRight: i == 0 ? curve : Radius.zero,
+            topLeft: i == 0 ? curve : Radius.zero,
+            bottomLeft: i == string.length - 1 ? curve : Radius.zero,
+            bottomRight: i == string.length - 1 ? curve : Radius.zero,
+          ));
 
         canvas.drawPath(path, paint);
 

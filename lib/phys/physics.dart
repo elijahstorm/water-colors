@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:water_colors/anim/strings.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:forge2d/forge2d.dart' as forge;
 import 'package:vector_math/vector_math_64.dart' as vector;
+import 'package:water_colors/phys/wind.dart';
 
 class StringPhysics extends StatefulWidget {
   const StringPhysics({Key? key}) : super(key: key);
@@ -11,15 +11,12 @@ class StringPhysics extends StatefulWidget {
   StringPhysicsState createState() => StringPhysicsState();
 }
 
-class StringPhysicsState extends State<StringPhysics>
-    with TickerProviderStateMixin {
-  late final Ticker ticker;
-  final forge.World world = forge.World(vector.Vector2(0, 0)); // no gravity
-  final List<List<forge.Body>> strings = [];
+class StringPhysicsState extends WindPhysicsState {
   final double radius = 20.0;
   final double stringWidth = 8.0;
-  final double stringHeight = 30.0;
+  final double stringHeight = 100.0;
   final double borderBounds = 10.0;
+  final int stringJoints = 10;
 
   late final AnimationController colorController;
   late final Animation<Color?> colorStartSources;
@@ -29,52 +26,50 @@ class StringPhysicsState extends State<StringPhysics>
   void initState() {
     super.initState();
 
-    ticker = createTicker((delta) {
-      world.stepDt(delta.inSeconds.toDouble());
-      setState(() {});
-    });
-
-    ticker.start();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final size = context.size!;
-      final int columnCount = size.width ~/ stringWidth;
-      const int rowCount = 10;
+      final int columnCount = size.width ~/ (stringWidth * 5);
+      final int rowCount = size.height ~/ (stringHeight);
 
       for (int j = 0; j < columnCount; j++) {
-        final stringBodies = <forge.Body>[];
-
         for (int i = 0; i < rowCount; i++) {
-          final x = j * stringWidth;
-          final y = i * stringHeight + 100;
+          final stringBodies = <forge.Body>[];
 
-          final shape = forge.PolygonShape();
-          shape.setAsBoxXY(stringWidth / 2, stringHeight);
+          for (int k = 0; k < stringJoints; k++) {
+            final x = (j + 1) * (stringWidth * 5) + (i * stringWidth * 2);
+            final y = (i + 1) * (stringHeight * 0.8) +
+                (k * (stringHeight / stringJoints));
 
-          final bodyDef = forge.BodyDef()
-            ..type = forge.BodyType.dynamic
-            ..position = vector.Vector2(x, y);
+            final shape = forge.PolygonShape();
+            shape.setAsBoxXY(stringWidth, stringHeight / stringJoints);
 
-          final body = world.createBody(bodyDef);
-          final fixtureDef = forge.FixtureDef(shape)..isSensor = true;
-          body.createFixture(fixtureDef);
+            final bodyDef = forge.BodyDef()
+              ..type = k == 0 ? forge.BodyType.static : forge.BodyType.dynamic
+              ..position = vector.Vector2(x, y);
 
-          // If this is not the first segment in the string, connect it to the previous segment with a DistanceJoint
-          if (i > 0) {
-            final prevBody = stringBodies.last;
+            final body = world.createBody(bodyDef);
+            final fixtureDef = forge.FixtureDef(shape)..isSensor = true;
+            body.createFixture(fixtureDef);
 
-            final jointDef = forge.DistanceJointDef()
-              ..initialize(prevBody, body, prevBody.position, body.position);
+            // If this is not the first segment in the string, connect it to the previous segment with a DistanceJoint
+            if (k > 0) {
+              final prevBody = stringBodies[k - 1];
 
-            final joint = forge.DistanceJoint(jointDef);
+              final jointDef = forge.DistanceJointDef()
+                ..initialize(prevBody, body, prevBody.position, body.position)
+                ..dampingRatio = 0.9
+                ..frequencyHz = 15.0;
 
-            world.createJoint(joint);
+              final joint = forge.DistanceJoint(jointDef);
+
+              world.createJoint(joint);
+            }
+
+            stringBodies.add(body);
           }
 
-          stringBodies.add(body);
+          strings.addAll([stringBodies]);
         }
-
-        strings.addAll([stringBodies]);
       }
     });
 
@@ -95,7 +90,6 @@ class StringPhysicsState extends State<StringPhysics>
 
   @override
   void dispose() {
-    ticker.stop();
     colorController.dispose();
     super.dispose();
   }
